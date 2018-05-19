@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CalendarMain.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Calendar</a> &gt; <a href="index.source.html" class="el_package">calendar</a> &gt; <span class="el_source">CalendarMain.java</span></div><h1>CalendarMain.java</h1><pre class="source lang-java linenums">package calendar;
+/*
+ * CalendarMain.java
+ */
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.LinkedList;
+
+
+
+
+
+<span class="nc" id="L16">public class CalendarMain {</span>
+	public static void main(String[] args) throws DateOutOfRangeException, IOException {
+		/** instance of DataHandler **/
+<span class="nc" id="L19">		System.out.println(&quot;Calendar Main: \n&quot; );</span>
+
+
+		
+		DataHandler dataHandler;
+<span class="nc" id="L24">		dataHandler = new DataHandler();</span>
+
+ 	
+		//get todays date
+<span class="nc" id="L28">    	Calendar rightnow = Calendar.getInstance();</span>
+    	//current month/year/date is today
+    	/** the month the user is currently viewing **/
+<span class="nc" id="L31">     	int thisMonth = rightnow.get(Calendar.MONTH);</span>
+     	/** todays date **/
+<span class="nc" id="L33">		int thisDay = rightnow.get(Calendar.DAY_OF_MONTH);</span>
+	   	/** the year the user is currently viewing **/
+<span class="nc" id="L35">   	 	int thisYear = rightnow.get(Calendar.YEAR);</span>
+		
+//		// Get a calendar which is set to a specified date.
+<span class="nc" id="L38">		Calendar calendar = new GregorianCalendar(thisYear, thisMonth, thisDay);</span>
+	// Increment the calendar's date by 1 day.
+<span class="nc" id="L40">		calendar.add(calendar.DAY_OF_MONTH,1);</span>
+		
+		
+
+    	
+
+
+		
+<span class="nc" id="L48">		 int startHour=15;</span>
+<span class="nc" id="L49">		 int startMinute=30;</span>
+<span class="nc" id="L50">		 int startDay=thisDay;  	</span>
+<span class="nc" id="L51">		 int startMonth=thisMonth+1; 	</span>
+<span class="nc" id="L52">		 int startYear=thisYear; 	</span>
+<span class="nc" id="L53">		 String title=&quot;Birthday Party&quot;;</span>
+<span class="nc" id="L54">		 String description=&quot;This is my birthday party.&quot;;</span>
+<span class="nc" id="L55">		 String emailAddress=&quot;aburasa@oregonstate.edu&quot;;</span>
+	
+		 //Construct a new Appointment object with the initial data	 
+<span class="nc" id="L58">         Appt appt1 = new Appt(startHour,</span>
+                  startMinute ,
+                  startDay ,
+                  startMonth ,
+                  startYear ,
+                  title,
+                 description,
+                 emailAddress);
+
+<span class="nc" id="L67">         System.out.println(appt1.toString());</span>
+
+<span class="nc" id="L69">         dataHandler.saveAppt(appt1);</span>
+		
+         // create another appointment
+<span class="nc" id="L72">         startHour=14;</span>
+<span class="nc" id="L73">		 startMinute=30;</span>
+<span class="nc" id="L74">		 startDay=thisDay;  	</span>
+<span class="nc" id="L75">		 startMonth=thisMonth+1; 	</span>
+<span class="nc" id="L76">		 startYear=thisYear; 	</span>
+<span class="nc" id="L77">		 title=&quot;Class&quot;;</span>
+<span class="nc" id="L78">		 description=&quot;Rescheduled class.&quot;;</span>
+		 //Construct a new Appointment object with the initial data	 
+<span class="nc" id="L80">         Appt appt2 = new Appt(startHour,</span>
+                  startMinute ,
+                  startDay ,
+                  startMonth ,
+                  startYear ,
+                  title,
+                 description,
+                 emailAddress);
+  
+<span class="nc" id="L89">         System.out.println(appt2.toString());</span>
+
+<span class="nc" id="L91">         dataHandler.saveAppt(appt2);</span>
+         
+         // create another appointment
+<span class="nc" id="L94">         startHour=16;</span>
+<span class="nc" id="L95">		 startMinute=30;</span>
+<span class="nc" id="L96">		 startDay=calendar.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L97">		 startMonth=calendar.get(Calendar.MONTH)+1;	</span>
+<span class="nc" id="L98">		 startYear=thisYear;	</span>
+<span class="nc" id="L99">		 title=&quot;Visit&quot;;</span>
+<span class="nc" id="L100">		 description=&quot;Visiting my parents!&quot;;</span>
+		 //Construct a new Appointment object with the initial data	 
+<span class="nc" id="L102">         Appt appt3 = new Appt(startHour,</span>
+                  startMinute ,
+                  startDay ,
+                  startMonth ,
+                  startYear ,
+                  title,
+                 description,
+                 emailAddress);
+<span class="nc" id="L110">         int[] recurDaysArr={2,3,4};</span>
+<span class="nc" id="L111">         appt3.setRecurrence( recurDaysArr, Appt.RECUR_BY_WEEKLY, 2, Appt.RECUR_NUMBER_FOREVER);</span>
+         
+<span class="nc" id="L113">         appt3.setValid();</span>
+         
+<span class="nc" id="L115">         System.out.println(appt3.toString());</span>
+
+         
+<span class="nc" id="L118">         dataHandler.saveAppt(appt3);</span>
+     
+  
+         // create another appointment
+<span class="nc" id="L122">         startHour=16;</span>
+<span class="nc" id="L123">		 startMinute=30;</span>
+<span class="nc" id="L124">		 startDay=-1;		</span>
+<span class="nc" id="L125">		 startMonth=thisMonth+2;	</span>
+<span class="nc" id="L126">		 startYear=thisYear;	</span>
+<span class="nc" id="L127">		 title=&quot;Visit&quot;;</span>
+<span class="nc" id="L128">		 description=&quot;Visiting my parents!&quot;;</span>
+		 //Construct a new Appointment object with the initial data	 
+<span class="nc" id="L130">         Appt appt4 = new Appt(startHour,</span>
+                  startMinute ,
+                  startDay ,
+                  startMonth ,
+                  startYear ,
+                  title,
+                 description,
+                 emailAddress);
+<span class="nc" id="L138">         int[] recurDaysArr4={2,3,4};</span>
+<span class="nc" id="L139">         appt4.setRecurrence( recurDaysArr4, Appt.RECUR_BY_WEEKLY, 3, Appt.RECUR_NUMBER_FOREVER);</span>
+         
+<span class="nc" id="L141">         appt4.setValid();</span>
+         
+<span class="nc" id="L143">         System.out.println(appt4.toString());</span>
+
+         
+<span class="nc" id="L146">         dataHandler.saveAppt(appt4);</span>
+         
+         
+ 		//get a list of appointments for one day, which is today
+<span class="nc" id="L150"> 		GregorianCalendar today = new GregorianCalendar(thisYear,thisMonth,thisDay);</span>
+<span class="nc" id="L151"> 		GregorianCalendar tomorrow = new GregorianCalendar(thisYear,thisMonth,thisDay);</span>
+
+<span class="nc" id="L153"> 		tomorrow.add(today.DAY_OF_MONTH,1);</span>
+ 
+
+<span class="nc" id="L156"> 		DateFormat dateFormat = new SimpleDateFormat(&quot;MM/dd/yyy&quot;);</span>
+
+ //			System.out.println(&quot;today is:&quot; + dateFormat.format(today.getTime()));
+ //			System.out.println(&quot;tomorrow is:&quot; + dateFormat.format(tomorrow.getTime()));
+ 			
+ 	        //Create a linked list of calendar days to return
+<span class="nc" id="L162"> 	        LinkedList&lt;CalDay&gt; calDays = new LinkedList&lt;CalDay&gt;();</span>
+
+<span class="nc" id="L164"> 			calDays = (LinkedList&lt;CalDay&gt;) dataHandler.getApptRange(today,tomorrow);	</span>
+
+<span class="nc" id="L166">			System.out.println(&quot;The number of appointments between &quot;+ dateFormat.format(today.getTime()) +&quot; (inclusive) and &quot; + dateFormat.format(tomorrow.getTime()) +  &quot; (exclusive) &quot;);</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">			for (int i = 0; i &lt; calDays.size(); i++){</span>
+				
+<span class="nc" id="L169">				CalDay calday= calDays.get(i);</span>
+				
+<span class="nc" id="L171">				String str= calday.getFullInfomrationApp(calday);</span>
+<span class="nc" id="L172">				System.out.println(str);</span>
+
+<span class="nc" id="L174">				LinkedList&lt;Appt&gt;  appts =calDays.get(i).getAppts();</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">				for(int index=0; index &lt; appts.size();index++){</span>
+<span class="nc" id="L176">					Appt appt_=appts.get(index);</span>
+<span class="nc" id="L177">					System.out.println(&quot;\n\n&quot;+appt_.toString());</span>
+				}
+			}
+// 	 		
+ 	 		//Delete an appointment
+ 			
+<span class="nc" id="L183"> 			dataHandler.deleteAppt(appt2);</span>
+ 			
+ 			
+     	/** instance of DataHandler **/
+<span class="nc" id="L187"> 		DataHandler dataHandler2 = new DataHandler(&quot;calendar2.xml&quot;,true);</span>
+// 		
+
+ 		
+<span class="nc" id="L191"> 		dataHandler2.saveAppt(appt2);</span>
+
+
+<span class="nc" id="L194">         System.exit(0);</span>
+		
+<span class="nc" id="L196">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

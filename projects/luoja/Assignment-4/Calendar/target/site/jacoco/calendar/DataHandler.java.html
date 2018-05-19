@@ -1,0 +1,596 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DataHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Calendar</a> &gt; <a href="index.source.html" class="el_package">calendar</a> &gt; <span class="el_source">DataHandler.java</span></div><h1>DataHandler.java</h1><pre class="source lang-java linenums">/**
+* DataHandler.java
+*
+**/
+
+package calendar;
+
+import java.util.*;
+import java.io.*;
+
+import javax.xml.parsers.*;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.*;
+import javax.xml.transform.stream.*;
+import org.xml.sax.*;
+
+
+import org.w3c.dom.*;
+
+/**
+* This handles all data that is read and written from disk.
+**/
+public class DataHandler {
+
+    /** Default file name **/
+<span class="fc" id="L26">    private static String DEFAULT_FILE_NAME = &quot;calendar.xml&quot;;</span>
+
+    /** Default auto-save setting after each change to an appointment **/
+<span class="fc" id="L29">    private static boolean DEFAULT_AUTO_SAVE = true;</span>
+
+    /** Very top of the XML document **/
+    private Document document;
+
+    /** Stores whether or not the datahandler was initialized **/
+    private boolean valid;
+
+    /** The file name (with the path) to read and write XML to **/
+    private String fileName;
+
+    /** The auto-save setting to use **/
+    private boolean autoSave;
+
+    /**
+     * Default constructor
+     * Creates a new DataHandler with the default filename and auto-save setting
+     **/
+    public DataHandler() throws IOException {
+        //Call the other constructor using the default file name.
+        //The default file is stored in the user's home directory.
+<span class="nc" id="L50">        this(System.getProperty(&quot;user.dir&quot;) +</span>
+<span class="nc" id="L51">        System.getProperty(&quot;file.separator&quot;) + DEFAULT_FILE_NAME);</span>
+<span class="nc" id="L52">    }</span>
+
+    /**
+     * Creates a new data handler with the specified filename.
+     * Uses the default auto-save setting.
+     **/
+    public DataHandler(String fileName) throws IOException {
+<span class="nc" id="L59">        this(fileName, DEFAULT_AUTO_SAVE);</span>
+<span class="nc" id="L60">    }</span>
+
+    /**
+     * Creates a new data handler with the specified filename and auto-save
+     * setting
+     **/
+<span class="fc" id="L66">    public DataHandler(String fileName, boolean autoSave) throws IOException {</span>
+        //Record the line separator for later use
+<span class="fc" id="L68">        String separator = System.getProperty(&quot;line.separator&quot;);</span>
+
+        //The data handler isn't valid unless everything is set up correctly
+<span class="fc" id="L71">        valid = false;</span>
+
+        //Record the auto-save setting and file name
+<span class="fc" id="L74">        this.autoSave = autoSave;</span>
+<span class="fc" id="L75">        setFileName(fileName);</span>
+
+        //Read the XML file...
+        //Step 1. Set up document builder factory and its settings
+<span class="fc" id="L79">        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();</span>
+<span class="fc" id="L80">        dbf.setValidating(false);</span>
+<span class="fc" id="L81">        dbf.setIgnoringComments(false);</span>
+<span class="fc" id="L82">        dbf.setIgnoringElementContentWhitespace(false);</span>
+<span class="fc" id="L83">        dbf.setCoalescing(false);</span>
+<span class="fc" id="L84">        dbf.setExpandEntityReferences(true);</span>
+
+        //Step 2. Create a document builder from the factory
+<span class="fc" id="L87">        DocumentBuilder db = null;</span>
+        try {
+<span class="fc" id="L89">            db = dbf.newDocumentBuilder();</span>
+        }
+<span class="nc" id="L91">        catch (ParserConfigurationException pce) {</span>
+<span class="nc" id="L92">            throw new IOException(&quot;Invalid parser configuration.&quot; + separator +</span>
+<span class="nc" id="L93">            pce.getMessage());</span>
+<span class="fc" id="L94">        }</span>
+<span class="fc" id="L95">        db.setErrorHandler(new XmlParserErrorHandler());</span>
+
+        //Step 3. Parse the file now (or a default string if it doesn't exist)
+<span class="fc" id="L98">        Document doc = null;</span>
+        try {
+<span class="fc" id="L100">            File file = new File(fileName);</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">            if (file.isFile()) {</span>
+<span class="fc" id="L102">                doc = db.parse(file);</span>
+            }
+            else {
+<span class="fc" id="L105">                String newFile = &quot;&lt;?xml version=\&quot;1.0\&quot;?&gt;&lt;calendar/&gt;&quot;;</span>
+<span class="fc" id="L106">                InputSource is = new InputSource(new StringReader(newFile));</span>
+<span class="fc" id="L107">                doc = db.parse(is);</span>
+            }
+        }
+<span class="fc" id="L110">        catch (SAXException se) {</span>
+<span class="fc" id="L111">            throw new IOException(&quot;Unable to read document.&quot; + separator +</span>
+<span class="fc" id="L112">            se.getMessage());</span>
+<span class="fc" id="L113">        }</span>
+
+        //Set the document node now
+<span class="fc" id="L116">        setDocument(doc);</span>
+<span class="fc" id="L117">        valid = true;</span>
+<span class="fc" id="L118">    }</span>
+
+    /**
+     * Retrieves a range of appointments between two dates.
+     * @return A list of all of the CalDays between firstDate (inclusive)
+     *  and lastDate (exclusive) with their respective appointments. If the
+     * data handler has not been initialized correctly, null is returned.
+     * @throws DateOutOfRangeException If any of the days constructed by the
+     *  given values are invalid, or if date 2 is not after date 1.
+     **/
+    public List&lt;CalDay&gt; getApptRange(GregorianCalendar firstDay,
+            GregorianCalendar lastDay) throws DateOutOfRangeException {
+
+            //Internal Diagnositic Messages turned on when true
+<span class="fc" id="L132">            boolean diagnose = false;</span>
+
+            //If the data handler isn't initialized return null
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">            if (isValid() == false) {</span>
+<span class="nc" id="L136">                return null;</span>
+            }
+
+            //Make sure that the first day is before the last day
+<span class="fc bfc" id="L140" title="All 2 branches covered.">            if (!firstDay.before(lastDay)) {</span>
+<span class="fc" id="L141">                throw new DateOutOfRangeException(&quot;Second date specified is not &quot; +</span>
+                    &quot;before the first date specified.&quot;);
+            }
+
+            //Create a linked list of calendar days to return
+<span class="fc" id="L146">            LinkedList&lt;CalDay&gt; calDays = new LinkedList&lt;CalDay&gt;();</span>
+
+            //Create the first CalDay object with the starting date and add to list
+<span class="fc" id="L149">            GregorianCalendar nextDay = (GregorianCalendar) firstDay.clone();</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">            while (nextDay.before(lastDay)) {</span>
+<span class="fc" id="L151">                calDays.add(new CalDay(nextDay));</span>
+<span class="fc" id="L152">                nextDay.add(nextDay.DAY_OF_MONTH, 1);</span>
+            }
+
+<span class="pc bpc" id="L155" title="1 of 2 branches missed.">            if (diagnose) {</span>
+<span class="nc" id="L156">                System.out.println(&quot;=======================================&quot;);</span>
+<span class="nc" id="L157">                System.out.println(&quot;DEBUGGING GETTING OF APPOINTMENTS      &quot;);</span>
+            }
+
+            //Retrieve the root node - &lt;calendar&gt;
+<span class="fc" id="L161">            Document doc = getDocument();</span>
+<span class="fc" id="L162">            Element root = doc.getDocumentElement();</span>
+
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">            if (diagnose) {</span>
+<span class="nc" id="L165">                System.out.println(&quot;Root node: &quot; + root.getTagName());</span>
+<span class="nc" id="L166">                System.out.println(&quot;All following nodes should be appt nodes.&quot;);</span>
+            }
+
+            //Retrieve the root's children - &lt;appt&gt; nodes
+<span class="fc" id="L170">            NodeList appts = root.getChildNodes();</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">            for (int i = 0; i &lt; appts.getLength(); i++) {</span>
+<span class="fc" id="L172">                Element currentAppt = (Element) appts.item(i);</span>
+
+<span class="pc bpc" id="L174" title="1 of 2 branches missed.">                if (diagnose) {</span>
+<span class="nc" id="L175">                    System.out.println(&quot;Nodes under the root: &quot; +</span>
+<span class="nc" id="L176">                        currentAppt.getTagName());</span>
+                }
+
+                //For this appointment, get the values of all fields
+<span class="fc" id="L180">                NodeList fieldNodes = currentAppt.getChildNodes();</span>
+<span class="fc" id="L181">                Hashtable&lt;String, String&gt; fields = new Hashtable&lt;String, String&gt;();</span>
+<span class="pc bpc" id="L182" title="1 of 2 branches missed.">                if (diagnose) {</span>
+<span class="nc" id="L183">                    System.out.println(&quot;Preparing to read each field for the appt&quot;);</span>
+                }
+<span class="fc bfc" id="L185" title="All 2 branches covered.">                for (int j = 0; j &lt; fieldNodes.getLength(); j++) {</span>
+<span class="fc" id="L186">                    Element currentField = (Element) fieldNodes.item(j);</span>
+<span class="fc" id="L187">                    String fieldName = currentField.getTagName();</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">                    if (diagnose) {</span>
+<span class="nc" id="L189">                        System.out.println(&quot;Reading field: &quot; + fieldName);</span>
+                    }
+<span class="fc" id="L191">                    String fieldValue = &quot;&quot;;</span>
+<span class="fc" id="L192">                    NodeList fieldValueNodes = currentField.getChildNodes();</span>
+<span class="fc bfc" id="L193" title="All 2 branches covered.">                    for (int k = 0; k &lt; fieldValueNodes.getLength(); k++) {</span>
+<span class="fc" id="L194">                        Text text = (Text)fieldValueNodes.item(k);</span>
+<span class="fc" id="L195">                        fieldValue += text.getData();</span>
+                    }
+<span class="pc bpc" id="L197" title="1 of 2 branches missed.">                    if (diagnose) {</span>
+<span class="nc" id="L198">                        System.out.println(&quot;Reading field's value: &quot; + fieldValue);</span>
+                    }
+
+<span class="fc" id="L201">                    fields.put(fieldName, fieldValue);</span>
+                }
+
+                //Construct a new Appointment object with the data found
+<span class="fc" id="L205">                Appt appt = new Appt(</span>
+<span class="fc" id="L206">                            Integer.parseInt((String)fields.get(&quot;startHour&quot;)),</span>
+<span class="fc" id="L207">                            Integer.parseInt((String)fields.get(&quot;startMinute&quot;)),</span>
+<span class="fc" id="L208">                            Integer.parseInt((String)fields.get(&quot;startDay&quot;)),</span>
+<span class="fc" id="L209">                            Integer.parseInt((String)fields.get(&quot;startMonth&quot;)),</span>
+<span class="fc" id="L210">                            Integer.parseInt((String)fields.get(&quot;startYear&quot;)),</span>
+<span class="fc" id="L211">                            (String)fields.get(&quot;title&quot;),</span>
+<span class="fc" id="L212">                            (String)fields.get(&quot;description&quot;),</span>
+<span class="fc" id="L213">                            (String)fields.get(&quot;location&quot;));</span>
+<span class="fc" id="L214">                LinkedList&lt;String&gt; recurDaysList = new LinkedList&lt;String&gt;();</span>
+<span class="fc" id="L215">                StringTokenizer stk =</span>
+<span class="fc" id="L216">                    new StringTokenizer((String)fields.get(&quot;recurDays&quot;));</span>
+<span class="fc bfc" id="L217" title="All 2 branches covered.">                while (stk.hasMoreTokens()) {</span>
+<span class="fc" id="L218">                    recurDaysList.add(stk.nextToken(&quot;,&quot;));</span>
+                }
+<span class="fc" id="L220">                int[] recurDaysArr = new int[recurDaysList.size()];</span>
+<span class="fc bfc" id="L221" title="All 2 branches covered.">                for (int j = 0; j &lt; recurDaysList.size(); j++) {</span>
+<span class="fc" id="L222">                    recurDaysArr[j] = Integer.parseInt((String)recurDaysList.get(j));</span>
+                }
+<span class="fc" id="L224">                appt.setRecurrence(recurDaysArr,</span>
+<span class="fc" id="L225">                            Integer.parseInt((String)fields.get(&quot;recurBy&quot;)),</span>
+<span class="fc" id="L226">                            Integer.parseInt((String)fields.get(&quot;recurIncrement&quot;)),</span>
+<span class="fc" id="L227">                            Integer.parseInt((String)fields.get(&quot;recurNumber&quot;)));</span>
+                //**When changing these later, remember to check for NULL ***/
+
+<span class="pc bpc" id="L230" title="1 of 2 branches missed.">                if (diagnose) {</span>
+<span class="nc" id="L231">                    System.out.println(&quot;Calculating appointment occurrences.&quot;);</span>
+                }
+                //Figure out which days the appointment occurs on
+<span class="fc" id="L234">                LinkedList&lt;GregorianCalendar&gt;  apptOccursOnDays =</span>
+<span class="fc" id="L235">                    getApptOccurences(appt, firstDay, lastDay);</span>
+
+<span class="pc bpc" id="L237" title="1 of 2 branches missed.">                if (diagnose) {</span>
+<span class="nc" id="L238">                    System.out.println(&quot;This appointment occurs on: &quot;);</span>
+                }
+
+                //For each day in the list, calculate the difference between the
+                //first day and the day of occurrence and add the appointment to
+                //the correct CalDay
+<span class="fc" id="L244">                int daysDifference = 0;</span>
+<span class="fc" id="L245">                nextDay = (GregorianCalendar)firstDay.clone();</span>
+<span class="fc" id="L246">                Iterator itr = apptOccursOnDays.iterator();</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">                while (itr.hasNext()) {</span>
+<span class="fc" id="L248">                    GregorianCalendar apptOccursOn = (GregorianCalendar)itr.next();</span>
+
+<span class="pc bpc" id="L250" title="1 of 2 branches missed.">                    if (diagnose) {</span>
+<span class="nc" id="L251">                        System.out.println(&quot;\t&quot; + apptOccursOn);</span>
+                    }
+
+<span class="fc bfc" id="L254" title="All 2 branches covered.">                    while(nextDay.before(apptOccursOn)) {</span>
+<span class="fc" id="L255">                        daysDifference++;</span>
+<span class="fc" id="L256">                        nextDay.add(nextDay.DAY_OF_MONTH, 1);</span>
+                    }
+
+<span class="fc" id="L259">                    CalDay calDayOfAppt = (CalDay)calDays.get(daysDifference);</span>
+<span class="fc" id="L260">                    calDayOfAppt.addAppt(appt);</span>
+
+<span class="fc" id="L262">                }</span>
+
+                //This appointment has been added to all CalDays
+<span class="pc bpc" id="L265" title="1 of 2 branches missed.">                if (diagnose) {</span>
+<span class="nc" id="L266">                    System.out.println(&quot;This appointment is done.&quot;);</span>
+                }
+            } //for nodelist
+<span class="fc" id="L269">            return calDays;</span>
+        }
+
+
+    /**
+     * This takes the given appointment and constructs a linked list of
+     * GregorianCalendar's, each of which represent a day when the appointment
+     * occurs. The days are guaranteed to be between firstDay (inclusive) and
+     * lastDay (exclusive). They are guaranteed to be in order.
+     **/
+    private static LinkedList&lt;GregorianCalendar&gt; getApptOccurences(Appt appt,
+        GregorianCalendar firstDay, GregorianCalendar lastDay) {
+
+<span class="fc" id="L282">        LinkedList&lt;GregorianCalendar&gt; result = new LinkedList&lt;GregorianCalendar&gt;();</span>
+
+        //Make sure that the firstDay is before the last day
+<span class="pc bpc" id="L285" title="1 of 2 branches missed.">        if (!firstDay.before(lastDay)) {</span>
+<span class="nc" id="L286">            return result;</span>
+        }
+
+        //Get the first recurrence taken care of
+<span class="fc" id="L290">        GregorianCalendar occurrenceDay =</span>
+<span class="fc" id="L291">                new GregorianCalendar(appt.getStartYear(), appt.getStartMonth()-1,</span>
+<span class="fc" id="L292">                    appt.getStartDay());</span>
+
+        //If the first occurrence is after the last day, then it doesn't matter
+        //when it recurs because those dates must be after the last day too
+<span class="fc bfc" id="L296" title="All 2 branches covered.">        if (!occurrenceDay.before(lastDay)) {</span>
+<span class="fc" id="L297">            return result;</span>
+        }
+
+        //Make sure that there is a limited number of recurrences
+<span class="fc bfc" id="L301" title="All 2 branches covered.">        for (int i = 0; i &lt; appt.getRecurNumber()+1; i++) {</span>
+
+            //Add the day of occurrence to the list if it is after the first day
+<span class="fc bfc" id="L304" title="All 2 branches covered.">            if (!occurrenceDay.before(firstDay)) {</span>
+<span class="fc" id="L305">                result.add(occurrenceDay);</span>
+            }
+
+            //Calculate the next recurrence day
+<span class="fc" id="L309">            occurrenceDay = getNextApptOccurrence(appt, occurrenceDay);</span>
+<span class="fc bfc" id="L310" title="All 2 branches covered.">            if (occurrenceDay == null) {</span>
+<span class="fc" id="L311">                break;</span>
+            }
+
+            //Keep cycling while the occurence day is in range
+<span class="fc bfc" id="L315" title="All 2 branches covered.">            if (!occurrenceDay.before(lastDay)) {</span>
+<span class="fc" id="L316">                break;</span>
+            }
+        }
+
+<span class="fc" id="L320">        return result;</span>
+    }
+
+    /**
+     * Calculates the next recurring day in the given appointment. If the
+     * appointment does not recur it returns null. If the date cannot be
+     * calculated for some reason it returns null.
+     **/
+    private static GregorianCalendar getNextApptOccurrence(Appt appt,
+            GregorianCalendar day) {
+        //If the appointment does not recur then return null
+<span class="fc bfc" id="L331" title="All 2 branches covered.">        if (!appt.isRecurring()) {</span>
+<span class="fc" id="L332">            return null;</span>
+        }
+
+        //Leave the original day untouched.
+<span class="fc" id="L336">        GregorianCalendar nextDay = (GregorianCalendar)day.clone();</span>
+
+        //This depends on the recurrence settings
+<span class="pc bpc" id="L339" title="1 of 4 branches missed.">        switch (appt.getRecurBy()) {</span>
+            case Appt.RECUR_BY_WEEKLY:
+<span class="fc" id="L341">                int[] recurDays = appt.getRecurDays();</span>
+
+                //If the user specified weekly recurrence and didn't specify
+                //which week days, then assume it is the same week day of the
+                //first occurrence
+<span class="fc bfc" id="L346" title="All 2 branches covered.">                if (recurDays.length == 0) {</span>
+                    //Add 7 days and return that by default
+<span class="fc" id="L348">                    nextDay.add(nextDay.DAY_OF_MONTH, 7);</span>
+<span class="fc" id="L349">                    return nextDay;</span>
+                }
+
+                //The user did specify weekly recurrence, so increment the
+                //day until it falls on a weekday the user specified
+<span class="fc bfc" id="L354" title="All 2 branches covered.">                for (int k = 0; k &lt; 7; k++) {</span>
+<span class="fc" id="L355">                    nextDay.add(nextDay.DAY_OF_MONTH, 1);</span>
+<span class="fc" id="L356">                    int newDayOfWeek = nextDay.get(nextDay.DAY_OF_WEEK);</span>
+
+<span class="fc bfc" id="L358" title="All 2 branches covered.">                    for (int i = 0; i &lt; recurDays.length; i++) {</span>
+                        //If the calendar is set to a day of the week that the
+                        //appt recurs on then return that day.
+<span class="fc bfc" id="L361" title="All 2 branches covered.">                        if (recurDays[i] == newDayOfWeek) {</span>
+<span class="fc" id="L362">                            return nextDay;</span>
+                        }
+                    }
+                }
+
+                //The loop above should have found a day. If the program
+                //execution is here then the weekdays specified are not in the
+                //range of valid Gregorian Calendar Days. Return null here.
+<span class="fc" id="L370">                return null;</span>
+            case Appt.RECUR_BY_MONTHLY:
+                //Just increment the month and return the day. Not sure what
+                //happens when the day is 31 and the next month has 30 days...
+<span class="fc" id="L374">                nextDay.add(nextDay.DAY_OF_MONTH, 1);</span>
+<span class="fc" id="L375">                return nextDay;</span>
+            case Appt.RECUR_BY_YEARLY:
+                //Just increment the year. The only possible problem is an
+                //appointment that recurs on February 29.
+<span class="fc" id="L379">                nextDay.add(nextDay.YEAR, 1);</span>
+<span class="fc" id="L380">                return nextDay;</span>
+        }
+<span class="nc" id="L382">        return null;</span>
+    }
+
+    /**
+     * Saves an appointment's information to the XML data tree. Does not
+     * write a new XML file to disk.
+     * @return True if the appointment was saved correctly
+     **/
+    public boolean saveAppt(Appt appt) {
+
+        //First things first - Do not save invalid appointments
+<span class="fc bfc" id="L393" title="All 2 branches covered.">        if (!appt.getValid()) {</span>
+<span class="fc" id="L394">            return false;</span>
+        }
+
+        //Add a new appt element node to the XML tree
+<span class="fc" id="L398">        Document doc = getDocument();</span>
+<span class="fc" id="L399">        Element root = doc.getDocumentElement();</span>
+<span class="fc" id="L400">        Element apptElement = doc.createElement(&quot;appt&quot;);</span>
+<span class="fc" id="L401">        root.appendChild(apptElement);</span>
+
+         /* Take the appointment's data and put it in XML tree of elements.
+          * Unfortunately, this is a little sloppy because the work needs to be
+          * done someplace. I am explaining one of the entries. The others
+          * are similar. **/
+        //Step 1 - Create a new element node that will store the start hour
+<span class="fc" id="L408">        Element startHourElement = doc.createElement(&quot;startHour&quot;);</span>
+
+        //Step 2 - Create a new text node that stores the data (these aren't
+        //  elements) The appt data is an integer and it is converted to string
+<span class="fc" id="L412">        Text startHourText = doc.createTextNode(</span>
+<span class="fc" id="L413">        Integer.toString(appt.getStartHour()));</span>
+
+        //Step 3 - The text node is a child of the element node
+<span class="fc" id="L416">        startHourElement.appendChild(startHourText);</span>
+
+        //Step 4 - The element is a child of the appt node
+<span class="fc" id="L419">        apptElement.appendChild(startHourElement);</span>
+
+        //The above is repeated for each element
+<span class="fc" id="L422">        Element startMinuteElement = doc.createElement(&quot;startMinute&quot;);</span>
+<span class="fc" id="L423">        Text startMinuteText = doc.createTextNode(</span>
+<span class="fc" id="L424">            Integer.toString(appt.getStartMinute()));</span>
+<span class="fc" id="L425">        startMinuteElement.appendChild(startMinuteText);</span>
+<span class="fc" id="L426">        apptElement.appendChild(startMinuteElement);</span>
+
+<span class="fc" id="L428">        Element startDayElement = doc.createElement(&quot;startDay&quot;);</span>
+<span class="fc" id="L429">        Text startDayText = doc.createTextNode(</span>
+<span class="fc" id="L430">            Integer.toString(appt.getStartDay()));</span>
+<span class="fc" id="L431">        startDayElement.appendChild(startDayText);</span>
+<span class="fc" id="L432">        apptElement.appendChild(startDayElement);</span>
+
+<span class="fc" id="L434">        Element startMonthElement = doc.createElement(&quot;startMonth&quot;);</span>
+<span class="fc" id="L435">        Text startMonthText = doc.createTextNode(</span>
+<span class="fc" id="L436">            Integer.toString(appt.getStartMonth()));</span>
+<span class="fc" id="L437">        startMonthElement.appendChild(startMonthText);</span>
+<span class="fc" id="L438">        apptElement.appendChild(startMonthElement);</span>
+
+<span class="fc" id="L440">        Element startYearElement = doc.createElement(&quot;startYear&quot;);</span>
+<span class="fc" id="L441">        Text startYearText = doc.createTextNode(</span>
+<span class="fc" id="L442">        Integer.toString(appt.getStartYear()));</span>
+<span class="fc" id="L443">        startYearElement.appendChild(startYearText);</span>
+<span class="fc" id="L444">        apptElement.appendChild(startYearElement);</span>
+
+
+<span class="fc" id="L447">        Element titleElement = doc.createElement(&quot;title&quot;);</span>
+<span class="fc" id="L448">        Text titleText = doc.createTextNode(appt.getTitle());</span>
+<span class="fc" id="L449">        titleElement.appendChild(titleText);</span>
+<span class="fc" id="L450">        apptElement.appendChild(titleElement);</span>
+
+<span class="fc" id="L452">        Element descriptionElement = doc.createElement(&quot;description&quot;);</span>
+<span class="fc" id="L453">        Text descriptionText = doc.createTextNode(appt.getDescription());</span>
+<span class="fc" id="L454">        descriptionElement.appendChild(descriptionText);</span>
+<span class="fc" id="L455">        apptElement.appendChild(descriptionElement);</span>
+
+
+<span class="fc" id="L458">        Element emailAddressElement = doc.createElement(&quot;emailAddress&quot;);</span>
+<span class="fc" id="L459">        Text emailAddressText = doc.createTextNode(appt.getEmailAddress());</span>
+<span class="fc" id="L460">        emailAddressElement.appendChild(emailAddressText);</span>
+<span class="fc" id="L461">        apptElement.appendChild(emailAddressElement);</span>
+
+<span class="fc" id="L463">        Element recurDaysElement = doc.createElement(&quot;recurDays&quot;);</span>
+<span class="fc" id="L464">        String recurDaysString = &quot;&quot;;</span>
+<span class="fc bfc" id="L465" title="All 2 branches covered.">        for (int i = 0; i &lt; appt.getRecurDays().length; i++) {</span>
+<span class="fc" id="L466">            recurDaysString += appt.getRecurDays()[i] + &quot;,&quot;;</span>
+        }
+<span class="fc" id="L468">        Text recurDaysText = doc.createTextNode(recurDaysString);</span>
+<span class="fc" id="L469">        recurDaysElement.appendChild(recurDaysText);</span>
+<span class="fc" id="L470">        apptElement.appendChild(recurDaysElement);</span>
+
+<span class="fc" id="L472">        Element recurByElement = doc.createElement(&quot;recurBy&quot;);</span>
+<span class="fc" id="L473">        Text recurByText = doc.createTextNode(</span>
+<span class="fc" id="L474">            Integer.toString(appt.getRecurBy()));</span>
+<span class="fc" id="L475">        recurByElement.appendChild(recurByText);</span>
+<span class="fc" id="L476">        apptElement.appendChild(recurByElement);</span>
+
+<span class="fc" id="L478">        Element recurIncrementElement = doc.createElement(&quot;recurIncrement&quot;);</span>
+<span class="fc" id="L479">        Text recurIncrementText = doc.createTextNode(</span>
+<span class="fc" id="L480">            Integer.toString(appt.getRecurIncrement()));</span>
+<span class="fc" id="L481">        recurIncrementElement.appendChild(recurIncrementText);</span>
+<span class="fc" id="L482">        apptElement.appendChild(recurIncrementElement);</span>
+
+<span class="fc" id="L484">        Element recurNumberElement = doc.createElement(&quot;recurNumber&quot;);</span>
+<span class="fc" id="L485">        Text recurNumberText = doc.createTextNode(</span>
+<span class="fc" id="L486">            Integer.toString(appt.getRecurNumber()));</span>
+<span class="fc" id="L487">        recurNumberElement.appendChild(recurNumberText);</span>
+<span class="fc" id="L488">        apptElement.appendChild(recurNumberElement);</span>
+
+        //Let the appointment know where it is stored in the XML tree
+<span class="fc" id="L491">        ((Appt) appt).setXmlElement(apptElement);</span>
+
+        //Handle the auto saving option
+<span class="fc bfc" id="L494" title="All 2 branches covered.">        if (isAutoSave()) {</span>
+<span class="fc" id="L495">            return save();</span>
+        }
+        else {
+<span class="fc" id="L498">            return true;</span>
+        }
+    }
+
+    /**
+     * Deletes the appointment's information from the XML data tree. Does not
+     * write a new XML file to disk.
+     * @return True if the appointment is deleted successfully.
+     **/
+    public boolean deleteAppt(Appt appt) {
+        //Do not do anything to invalid appointments
+<span class="fc bfc" id="L509" title="All 2 branches covered.">        if (!appt.getValid()) {</span>
+<span class="fc" id="L510">            return false;</span>
+        }
+
+        //Remove the appointment from the XML tree if applicable
+<span class="fc" id="L514">        Element apptElement = appt.getXmlElement();</span>
+<span class="fc bfc" id="L515" title="All 2 branches covered.">        if (apptElement == null) {</span>
+<span class="fc" id="L516">            return false;</span>
+        }
+<span class="fc" id="L518">        Node parentNode = apptElement.getParentNode();</span>
+<span class="fc" id="L519">        parentNode.removeChild(apptElement);</span>
+<span class="fc" id="L520">        appt.setXmlElement(null);</span>
+
+<span class="fc bfc" id="L522" title="All 2 branches covered.">        if (isAutoSave()) {</span>
+<span class="fc" id="L523">            return save();</span>
+        }
+        else {
+<span class="fc" id="L526">            return true;</span>
+        }
+    }
+
+    /**
+     * Writes a new XML file to disk.
+     **/
+    public boolean save() {
+
+        try {
+            //Create a transformer. The transformer is not really transforming
+            //much, it is just outputting XML
+<span class="fc" id="L538">            TransformerFactory tFactory = TransformerFactory.newInstance();</span>
+<span class="fc" id="L539">            Transformer transformer = tFactory.newTransformer();</span>
+
+<span class="fc" id="L541">            DOMSource source = new DOMSource(getDocument());</span>
+<span class="fc" id="L542">            File outputFile = new File(getFileName());</span>
+<span class="fc" id="L543">            StreamResult result = new StreamResult(outputFile);</span>
+<span class="fc" id="L544">            transformer.transform(source, result);</span>
+        }
+        //These exceptions should never be thrown because the structure of
+        //the XML document is preset and they are simple, any problems
+        //should be covered in testing. Therefore, they just return false.
+<span class="nc" id="L549">        catch (TransformerConfigurationException tce) {</span>
+<span class="nc" id="L550">            return false;</span>
+        }
+<span class="nc" id="L552">        catch (TransformerException te) {</span>
+<span class="nc" id="L553">            return false;</span>
+<span class="fc" id="L554">        }</span>
+
+<span class="fc" id="L556">        return true;</span>
+    }
+
+    /**
+     * @return True if autoSave is set
+     **/
+    private boolean isAutoSave() {
+<span class="fc" id="L563">        return autoSave;</span>
+    }
+
+    /**
+     * @return True if the dataHandler is initialized correctly
+     **/
+    private boolean isValid() {
+<span class="fc" id="L570">        return valid;</span>
+    }
+
+    /** Sets parent **/
+    private void setDocument(Document document) {
+<span class="fc" id="L575">        this.document = document;</span>
+<span class="fc" id="L576">    }</span>
+
+    /** Sets fileName **/
+    private void setFileName(String fileName) {
+<span class="fc" id="L580">        this.fileName = fileName;</span>
+<span class="fc" id="L581">    }</span>
+
+    /** Gets parent **/
+    private Document getDocument() {
+<span class="fc" id="L585">        return document;</span>
+    }
+
+    /** Gets filename **/
+    private String getFileName() {
+<span class="fc" id="L590">        return fileName;</span>
+    }
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

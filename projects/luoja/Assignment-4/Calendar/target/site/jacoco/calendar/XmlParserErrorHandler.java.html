@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>XmlParserErrorHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Calendar</a> &gt; <a href="index.source.html" class="el_package">calendar</a> &gt; <span class="el_source">XmlParserErrorHandler.java</span></div><h1>XmlParserErrorHandler.java</h1><pre class="source lang-java linenums">/*
+ * XmlParserErrorHandler.java
+ *
+ */
+
+package calendar;
+
+import org.xml.sax.*;
+
+/**
+* This error handler is to report warnings and errors with the 
+* XML Parser. It is modeled after Java's sample code.
+*
+**/
+
+<span class="fc" id="L16">public class XmlParserErrorHandler implements ErrorHandler {</span>
+
+	/**
+	* Returns a string describing parse exception details
+	**/
+	private String getParseExceptionInfo(SAXParseException spe) {
+<span class="fc" id="L22">		String systemId = spe.getSystemId();</span>
+<span class="pc bpc" id="L23" title="1 of 2 branches missed.">		if (systemId == null) {</span>
+<span class="nc" id="L24">			systemId = &quot;null&quot;;</span>
+		}
+<span class="fc" id="L26">		String info = &quot;URI=&quot; + systemId +</span>
+<span class="fc" id="L27">		&quot; Line=&quot; + spe.getLineNumber() +</span>
+<span class="fc" id="L28">		&quot;: &quot; + spe.getMessage();</span>
+<span class="fc" id="L29">		return info;</span>
+	}
+	
+	// The following methods are standard SAX ErrorHandler methods.
+	// See SAX documentation for more info.
+	public void warning(SAXParseException spe) throws SAXException {
+		//out.println(&quot;Warning: &quot; + getParseExceptionInfo(spe));
+		//Treat errors as warnings
+<span class="nc" id="L37">		String message = &quot;Error: &quot; + getParseExceptionInfo(spe);</span>
+<span class="nc" id="L38">		throw new SAXException(message);</span>
+	}
+
+	public void error(SAXParseException spe) throws SAXException {
+<span class="nc" id="L42">		String message = &quot;Error: &quot; + getParseExceptionInfo(spe);</span>
+<span class="nc" id="L43">		throw new SAXException(message);</span>
+	}
+
+	public void fatalError(SAXParseException spe) throws SAXException {
+<span class="fc" id="L47">		String message = &quot;Fatal Error: &quot; + getParseExceptionInfo(spe);</span>
+<span class="fc" id="L48">		throw new SAXException(message);</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>
